@@ -5,6 +5,7 @@
 # libraries
 library(tidyverse)
 library(ggridges)
+`%<>%` <- magrittr::`%<>%`
 
 # grid
 N <- 1e4
@@ -36,10 +37,10 @@ grid_approx <- function(mu, n, prior, ...) {
 df <- tibble::frame_data(
     ~rank, ~br, ~theater, ~mu, ~n,
     1, F, "nick",                     .94, 116,
-    2, T, "regal columbia cinema 7",  .78,  85,
+    2, T, "regal cinema 7",  .78,  85,
     3, T, "amc dutch square 14",      .84, 160,
     4, F, "amc classic columbia 10",  .80, 162,
-    5, F, "regal columbia grande 14", .88, 318,
+    5, F, "regal grande 14", .88, 318,
     6, F, "spotlight st andrews",     .90, 267,
     7, T, "amc harbison 14",          .78, 159,
     8, F, "carver",                  1.00,   1,
@@ -48,27 +49,35 @@ df <- tibble::frame_data(
 )
 
 ## viz ----
-s <- df %>% 
+df %<>%
+  mutate(samples = map2(.$mu, .$n, ~ grid_approx(.x, .y, prior = normalizing_prior)))
+df %<>% mutate(mean_sample = map_dbl(.$samples, mean),
+               median_sample = map_dbl(.$samples, median)) %>%
+  arrange(desc(mean_sample), desc(median_sample))
+
+best_two <- df %>% 
+  select(theater, samples) %>%
+  filter(theater %in% c('amc dutch square 14', 'regal sandhill 16')) %>% 
+  unnest %>%
   group_by(theater) %>%
-  # do(data.frame(samples = grid_approx(.$mu, .$n, uniform_prior))) %>%
-  # do(data.frame(samples = grid_approx(.$mu, .$n, weak_prior))) %>%
-  do(data.frame(samples = grid_approx(.$mu, .$n, normalizing_prior))) %>%
-  ungroup %>%
-  inner_join(df %>% select(rank, br, theater), .) %>%
-  filter(br) 
+  mutate(row = row_number()) %>%
+  spread(theater, samples) %>%
+  mutate(diff = `amc dutch square 14` - `regal sandhill 16`)
 
-with(s, mean(samples[theater == 'amc dutch square 14'] >
-             samples[theater == 'regal sandhill 16']))
-
-with(s, hist(samples[theater == 'amc dutch square 14'] - 
-             samples[theater == 'regal sandhill 16'], xlab = '', 
-             main = '(dutch square 14) - (regal sandhill 16)'))
+mean(best_two$diff > 0)
+hist(best_two$diff, main = '(dutch square 14) - (regal sandhill 16)')
 abline(v = 0, lty = 2, lwd = 3, col = 'red')
 
-ggplot(s, aes(x = samples, y = reorder(theater, -rank))) +  
+p <- df %>% 
+  filter(br) %>%
+  unnest %>%
+  ggplot(aes(x = samples, y = reorder(theater, mean_sample))) +  
   geom_density_ridges(scale = 4, alpha = 0.7) + theme_ridges() + 
   scale_y_discrete(expand = c(0.01, 0)) +
   scale_x_continuous(expand = c(0, 0)) +
-  labs(x = 'Density of samples from posterior', y = 'theater') +
-  ggtitle('Bayesian Estimate of Google Reviews for Movie Theaters in Columbia',
-          subtitle = 'Uniform Prior')
+  labs(x = 'density of samples from posterior', y = 'theater') +
+  ggtitle('Bayesian Estimates of Movie Theater Quality',
+          subtitle = 'Uniform Prior') + 
+  labs(caption = 'Data from Google reviews')
+  
+ggsave('theaters.pdf', p)

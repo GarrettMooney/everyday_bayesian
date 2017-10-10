@@ -5,6 +5,7 @@
 # libraries
 library(tidyverse)
 library(ggridges)
+`%<>%` <- magrittr::`%<>%`
 
 # grid
 N <- 1e4
@@ -47,17 +48,21 @@ df <- tibble::frame_data(
    10, "mr friendlys",    .9, 197)
 
 ## viz ----
-df %>% 
-  group_by(restaurant) %>%
-  # do(data.frame(samples = grid_approx(.$mu, .$n, uniform_prior))) %>%
-  # do(data.frame(samples = grid_approx(.$mu, .$n, weak_prior))) %>%
-  do(data.frame(samples = grid_approx(.$mu, .$n, normalizing_prior))) %>%
-  ungroup %>%
-  inner_join(df %>% select(rank, restaurant), .) %>%
-  ggplot(aes(x = samples, y = reorder(restaurant, -rank))) +  
-  geom_density_ridges(scale = 4) + theme_ridges() + 
+df %<>% 
+  mutate(samples = map2(.$mu, .$n, ~ grid_approx(.x, .y, prior = normalizing_prior)))
+df %<>% mutate(mean_sample = map_dbl(.$samples, mean),
+               median_sample = map_dbl(.$samples, median)) %>%
+  arrange(desc(mean_sample), desc(median_sample))
+
+p <- df %>% 
+  unnest %>%
+  ggplot(aes(x = samples, y = reorder(restaurant, mean_sample))) +  
+  geom_density_ridges(scale = 4, alpha = 0.7) + theme_ridges() + 
   scale_y_discrete(expand = c(0.01, 0)) +
   scale_x_continuous(expand = c(0, 0)) +
-  labs(x = 'Density of samples from posterior', y = 'Restaurant') +
-  ggtitle('Bayesian Estimate of Yelp Ratings for Columbia, SC',
-          subtitle = 'Prior of beta(36, 16)')
+  labs(x = 'density of samples from posterior', y = 'restaurant') +
+  ggtitle('Bayesian Estimates of Restaurant Quality',
+          subtitle = 'Beta(36, 16) prior') + 
+  labs(caption = 'Data from Google reviews')
+  
+ggsave('restaurants.pdf', p)
