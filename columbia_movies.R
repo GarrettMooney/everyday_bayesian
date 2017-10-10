@@ -76,8 +76,8 @@ p <- df %>%
   scale_y_discrete(expand = c(0.01, 0)) +
   scale_x_continuous(expand = c(0, 0)) +
   labs(x = 'density of samples from posterior', y = 'theater') +
-  ggtitle('bayesian estimates of movie theater quality',
+  ggtitle('Bayesian Estimates of Movie Theater Quality',
           subtitle = 'uniform prior') + 
-  labs(caption = 'data from google reviews, filtered to only show theaters playing blade runner.')
+  labs(caption = 'Data from Google reviews, filtered to only show theaters playing Blade Runner 2049.')
 
 ggsave('theaters.pdf', p)
