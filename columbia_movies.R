@@ -37,10 +37,10 @@ grid_approx <- function(mu, n, prior, ...) {
 df <- tibble::frame_data(
     ~rank, ~br, ~theater, ~mu, ~n,
     1, F, "nick",                     .94, 116,
-    2, T, "regal cinema 7",  .78,  85,
+    2, T, "regal cinema 7",           .78,  85,
     3, T, "amc dutch square 14",      .84, 160,
     4, F, "amc classic columbia 10",  .80, 162,
-    5, F, "regal grande 14", .88, 318,
+    5, F, "regal grande 14",          .88, 318,
     6, F, "spotlight st andrews",     .90, 267,
     7, T, "amc harbison 14",          .78, 159,
     8, F, "carver",                  1.00,   1,
@@ -50,7 +50,7 @@ df <- tibble::frame_data(
 
 ## viz ----
 df %<>%
-  mutate(samples = map2(.$mu, .$n, ~ grid_approx(.x, .y, prior = normalizing_prior)))
+  mutate(samples = map2(.$mu, .$n, ~ grid_approx(.x, .y, prior = uniform_prior)))
 df %<>% mutate(mean_sample = map_dbl(.$samples, mean),
                median_sample = map_dbl(.$samples, median)) %>%
   arrange(desc(mean_sample), desc(median_sample))
@@ -65,7 +65,7 @@ best_two <- df %>%
   mutate(diff = `amc dutch square 14` - `regal sandhill 16`)
 
 mean(best_two$diff > 0)
-hist(best_two$diff, main = '(dutch square 14) - (regal sandhill 16)')
+hist(best_two$diff, 30, main = '(dutch square 14) - (regal sandhill 16)')
 abline(v = 0, lty = 2, lwd = 3, col = 'red')
 
 p <- df %>% 
@@ -76,8 +76,8 @@ p <- df %>%
   scale_y_discrete(expand = c(0.01, 0)) +
   scale_x_continuous(expand = c(0, 0)) +
   labs(x = 'density of samples from posterior', y = 'theater') +
-  ggtitle('Bayesian Estimates of Movie Theater Quality',
-          subtitle = 'Uniform Prior') + 
-  labs(caption = 'Data from Google reviews')
-  
+  ggtitle('bayesian estimates of movie theater quality',
+          subtitle = 'uniform prior') + 
+  labs(caption = 'data from google reviews, filtered to only show theaters playing blade runner.')
+
 ggsave('theaters.pdf', p)

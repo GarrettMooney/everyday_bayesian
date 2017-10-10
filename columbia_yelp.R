@@ -63,6 +63,6 @@ p <- df %>%
   labs(x = 'density of samples from posterior', y = 'restaurant') +
   ggtitle('Bayesian Estimates of Restaurant Quality',
           subtitle = 'Beta(36, 16) prior') + 
-  labs(caption = 'Data from Google reviews')
+  labs(caption = 'Data from Yelp reviews')
   
 ggsave('restaurants.pdf', p)
